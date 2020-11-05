@@ -139,7 +139,8 @@ class _RPN(nn.Module):
                         [ 0.,  0.,  0., -1.,  1.,  1., -1.,  0.,  0.]]
             rpn_keep = [ 0,  1,  2,  3,  5,  7,  8,  9, 10, 11, 13, 14, 16, 17] 也就是将rpn_label先拉平，然后将里面非-1的值的索引取出，也就是将正、负样本的索引取出
             '''
-
+            
+            #下面将正负样本的预测分数和标签找出来，计算分类损失（前景背景），只计算正负样本的分类损失
             rpn_cls_score = torch.index_select(rpn_cls_score.view(-1,2), 0, rpn_keep)
             #rpn_cls_score.view(-1, 2).shape=(b*9*h*w,2)  假设rpn_keep.shape=(k)也就是正样本和负样本总数为k，里面存了正负样本的索引
             #rpn_cls_score.shape=(k) 将这个batch里面所有图片正负样本的预测分数找出来（正、负样本数量共k个）
@@ -163,6 +164,7 @@ class _RPN(nn.Module):
             rpn_bbox_targets = Variable(rpn_bbox_targets)
 
             ##rpn_bbox_pred.shape=(b,4*9,w,h)预测的anchor的回归值
+            #计算正负样本的回顾损失（值计算了回归损失，只计算正样本的回归损失，负样本和ignore的回归损失被置为0），计算每张图片的正样本损失（求和再除以正负样本总数），然后求每个图片的损失均值
             self.rpn_loss_box = _smooth_l1_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights,
                                                             rpn_bbox_outside_weights, sigma=3, dim=[1,2,3])
             #self.rpn_loss_box=(2.36)  是一个值，代表一个batch里面各个图片上的回归损失求的平均
