@@ -75,7 +75,11 @@ def _smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_w
     :param bbox_pred:#rpn_bbox_pred.shape=(b,4*9,w,h)预测的anchor的回归值
     :param bbox_targets: #rpn_bbox_targets = bbox_targets.shape = (b, 9 * 4, h, w), 所有anchor的目标回归值
     :param bbox_inside_weights: #rpn_bbox_inside_weights = bbox_inside_weights.shape = (b, 4 * 9, h, w), 所有anchor的回归inside权重  值为0或1，正样本为1，负样本和ignore为0，代表负样本不算回归损失
-    :param bbox_outside_weights: #rpn_bbox_outside_weights = bbox_outside_weights.shape = (b, 4 * 9, h, w) 值为0或1/k  k是正、负样本的总数（一个batch里面的总数）
+    :param bbox_outside_weights: #rpn_bbox_outside_weights = bbox_outside_weights.shape = (b, 4 * 9, h, w) 值为0或1/k  ; k是正、负样本的总数（一个batch里面的总数），每个图片的正负样本总数是不同的，计算完每张图片的每个box的smooth
+    损失之后，会求和（每个图片各自求和），然和每个图片的损失再乘上0 或者 1/k(论文里面回归损失乘上的一个系数，就是这个bbox_outside_weights)
+    bbox_inside_weights和bbox_outside_weights都是回归损失函数的系数，一个在求和符号里面，一个在求和符号外面。
+    
+ 
     :param sigma: 3
     :param dim: [1,2,3]
     :return:
@@ -131,7 +135,8 @@ def _smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_w
     
     '''
     in_loss_box = torch.pow(in_box_diff, 2) * (sigma_2 / 2.) * smoothL1_sign \
-                  + (abs_in_box_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)#这部分看smoothL1 loss的公式就能看懂
+                  + (abs_in_box_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)
+    #这部分看smoothL1 loss的公式就能看懂   参考链接：https://blog.csdn.net/Mr_health/article/details/84970776
     #in_loss_box.shape=(b,4*9,w,h) 也就是损失函数求和的部分（这里还没有求和，以向量的形式计算）
     out_loss_box = bbox_outside_weights * in_loss_box  #shape=(b,4*9,w,h)
     loss_box = out_loss_box #shape=(b,4*9,w,h)
